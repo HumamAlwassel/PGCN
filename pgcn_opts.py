@@ -46,9 +46,15 @@ parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
 parser.add_argument('--snapshot_pref', type=str, default="")
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
-parser.add_argument('--gpus', nargs='+', type=int, default=None)
+parser.add_argument('--gpus', nargs='+', type=int, default=[0])
 
 
+parser.add_argument('--train_ft_path', required=True, type=str,
+                    help='path to the h5 feature file')
+parser.add_argument('--test_ft_path', required=True, type=str,
+                    help='path to the h5 feature file')
+parser.add_argument('--feat_dim', required=True, type=int,
+                    help='feature dimension')
 
 
 

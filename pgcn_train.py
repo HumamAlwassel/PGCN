@@ -18,19 +18,29 @@ from ops.utils import get_and_save_args, get_logger
 from tools.Recorder import Recorder
 #from tensorboardX import SummaryWriter
 
-SEED = 777
-random.seed(SEED)
-torch.manual_seed(SEED)
-torch.cuda.manual_seed(SEED)
-np.random.seed(SEED)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
+import time
+import datetime
+
+#SEED = 777
+#random.seed(SEED)
+#torch.manual_seed(SEED)
+#torch.cuda.manual_seed(SEED)
+#np.random.seed(SEED)
+#torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = True
 
 best_loss = 100
 cudnn.benchmark = True
 pin_memory = True
-os.environ['CUDA_DEVICE_ORDER'] = "PCI_BUS_ID"
-os.environ['CUDA_VISIBLE_DEVICES'] = "0"
+#os.environ['CUDA_DEVICE_ORDER'] = "PCI_BUS_ID"
+#os.environ['CUDA_VISIBLE_DEVICES'] = "0"
+
+
+def get_mem_usage(gpu_ids):
+    GB = 1024.0 ** 3
+    output = ["device_%d = %.03fGB" % (device, torch.cuda.max_memory_allocated(torch.device('cuda:%d' % device)) / GB) for device in gpu_ids]
+    return ' '.join(output)[:-1]
+
 
 def main():
     global args, best_loss, writer, adj_num, logger
@@ -42,6 +52,11 @@ def main():
     graph_configs = configs["graph_configs"]
     args = parser.parse_args()
 
+    dataset_configs['train_ft_path'] = args.train_ft_path
+    dataset_configs['test_ft_path'] = args.test_ft_path
+    model_configs['act_feat_dim'] = args.feat_dim
+    model_configs['comp_feat_dim'] = 3 * args.feat_dim
+
     """copy codes and creat dir for saving models and logs"""
     if not os.path.isdir(args.snapshot_pref):
         os.makedirs(args.snapshot_pref)
@@ -51,8 +66,8 @@ def main():
 
     if not args.evaluate:
         writer = SummaryWriter(args.snapshot_pref)
-        recorder = Recorder(args.snapshot_pref, ["models", "__pycache__"])
-        recorder.writeopt(args)
+        #recorder = Recorder(args.snapshot_pref, ["models", "__pycache__"])
+        #recorder.writeopt(args)
 
     logger.info('\nruntime args\n\n{}\n\nconfig\n\n{}'.format(args, dataset_configs))
 
@@ -116,6 +131,7 @@ def main():
 
 
     for epoch in range(args.start_epoch, args.epochs):
+        start_time = time.time()
 
         adjust_learning_rate(optimizer, epoch, args.lr_steps)
         train(train_loader, model, activity_criterion, completeness_criterion, regression_criterion, optimizer, epoch)
@@ -133,6 +149,10 @@ def main():
                 'reg_stats': torch.from_numpy(train_loader.dataset.stats)
             }, is_best, epoch, filename='checkpoint.pth.tar')
 
+        elapsed_time = time.time() - start_time
+        eta_time = elapsed_time * (args.epochs - epoch)
+        print("[Epoch {:03d}] mem {} time {} eta {}".format(epoch, get_mem_usage(args.gpus),
+            datetime.timedelta(seconds=eta_time), datetime.timedelta(seconds=eta_time)))
     writer.close()
 
 
@@ -315,10 +335,10 @@ def validate(val_loader, model, act_criterion, comp_criterion, regression_criter
 
 
 def save_checkpoint(state, is_best, epoch, filename='checkpoint.pth.tar'):
-    filename = args.snapshot_pref + '_'.join(('PGCN', args.dataset, 'epoch', str(epoch), filename))
+    filename = os.path.join(args.snapshot_pref, '_'.join(('PGCN', args.dataset, 'epoch', str(epoch), filename)))
     torch.save(state, filename)
     if is_best:
-        best_name = args.snapshot_pref + '_'.join(('PGCN', args.dataset, 'model_best.pth.tar'))
+        best_name = os.path.join(args.snapshot_pref, '_'.join(('PGCN', args.dataset, 'model_best.pth.tar')))
         shutil.copyfile(filename, best_name)
 
 class AverageMeter(object):

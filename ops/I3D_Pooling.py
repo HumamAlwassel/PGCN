@@ -4,10 +4,16 @@ import numpy as np
 from numpy.random import randint
 import pandas as pd
 import time
+import h5py
 
 def I3D_Pooling(prop_indices, vid, ft_path, n_frame, n_seg=1):
 
-    ft_tensor = torch.load(os.path.join(ft_path, vid)).float()
+    if '.h5' in ft_path:
+        f = h5py.File(ft_path, 'r')
+        ft_tensor = torch.from_numpy(f[vid][()]).float()
+        f.close()
+    else:
+        ft_tensor = torch.load(os.path.join(ft_path, vid)).float()
     fts_all_act = []
     fts_all_comp = []
 

@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import time
 import logging
+import os
 from ruamel import yaml
 
 def get_logger(args):
@@ -14,13 +15,13 @@ def get_logger(args):
     handler.setLevel(0)
     logger.addHandler(handler)
 
-    date = time.strftime('%Y%m%d%H%M', time.localtime(time.time()))
-    logfile = args.snapshot_pref+date+'.log'
-    file_handler = logging.FileHandler(logfile, mode='w')
-    file_handler.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+#    date = time.strftime('%Y%m%d%H%M', time.localtime(time.time()))
+#    logfile = args.snapshot_pref+date+'.log'
+#    file_handler = logging.FileHandler(logfile, mode='w')
+#    file_handler.setLevel(logging.INFO)
+#    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+#    file_handler.setFormatter(formatter)
+#    logger.addHandler(file_handler)
 
     return logger
 
@@ -39,7 +40,9 @@ def get_and_save_args(parser):
             if (v != default_config[k]) and (v is not None):
                 print(f"Updating:  {k}: {default_config[k]} (default) ----> {v}")
                 default_config[k] = v
-    yaml.dump(default_config, open('./current_configs.yaml', 'w'), indent=4, Dumper=yaml.RoundTripDumper)
+    yaml.dump(default_config, open(os.path.join(args.snapshot_pref, 'current_configs.yaml'), 'w'), indent=4, Dumper=yaml.RoundTripDumper)
+
+    torch.cuda.set_device(args.gpus[0])
     return default_config
 
 

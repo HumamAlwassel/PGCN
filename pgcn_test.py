@@ -22,23 +22,34 @@ parser.add_argument('--no_regression', action="store_true", default=False)
 parser.add_argument('--max_num', type=int, default=-1)
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('--gpus', nargs='+', type=int, default=None)
+parser.add_argument('--gpus', nargs='+', type=int, default=[0])
 
-SEED = 777
-random.seed(SEED)
-torch.manual_seed(SEED)
-torch.cuda.manual_seed(SEED)
-np.random.seed(SEED)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
+parser.add_argument('--train_ft_path', required=True, type=str,
+                    help='path to the h5 feature file')
+parser.add_argument('--test_ft_path', required=True, type=str,
+                    help='path to the h5 feature file')
+parser.add_argument('--feat_dim', required=True, type=int,
+                    help='feature dimension')
+
+#SEED = 777
+#random.seed(SEED)
+#torch.manual_seed(SEED)
+#torch.cuda.manual_seed(SEED)
+#np.random.seed(SEED)
+#torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = True
 
 args = parser.parse_args()
-os.environ['CUDA_DEVICE_ORDER'] = "PCI_BUS_ID"
-os.environ['CUDA_VISIBLE_DEVICES'] = "0,2,3,4,5,6,7"
+#os.environ['CUDA_DEVICE_ORDER'] = "PCI_BUS_ID"
+#os.environ['CUDA_VISIBLE_DEVICES'] = "0,2,3,4,5,6,7"
 
 configs = get_configs(args.dataset)
 dataset_configs = configs['dataset_configs']
+dataset_configs['train_ft_path'] = args.train_ft_path
+dataset_configs['test_ft_path'] = args.test_ft_path
 model_configs = configs["model_configs"]
+model_configs['act_feat_dim'] = args.feat_dim
+model_configs['comp_feat_dim'] = 3 * args.feat_dim
 graph_configs = configs["graph_configs"]
 
 adj_num = graph_configs['adj_num']
@@ -176,7 +187,7 @@ if __name__ == '__main__':
 
     # This net is used to provides setup settings. It is not used for testing.
 
-    checkpoint = torch.load(args.weights)
+    checkpoint = torch.load(args.weights, map_location='cpu')
 
     print("model epoch {} loss: {}".format(checkpoint['epoch'], checkpoint['best_loss']))
     base_dict = {'.'.join(k.split('.')[1:]): v for k, v in list(checkpoint['state_dict'].items())}

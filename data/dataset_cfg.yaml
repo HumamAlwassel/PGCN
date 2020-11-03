@@ -1,9 +1,6 @@
 thumos14:
   dataset_configs:
 
-    train_ft_path: /home/datasets/THUMOS14/I3D_video_level/Rgb_Train_All
-    test_ft_path: /home/datasets/THUMOS14/I3D_video_level/Rgb_Test_All
-
     train_dict_path: data/thumos14_train_prop_dict.pkl
     val_dict_path: data/thumos14_val_prop_dict.pkl
     test_dict_path: data/thumos14_test_prop_dict.pkl
@@ -36,8 +33,6 @@ thumos14:
 
   model_configs:
     num_class: 20
-    act_feat_dim: 1024
-    comp_feat_dim: 3072
     dropout: 0.8
     gcn_dropout: 0.7
 

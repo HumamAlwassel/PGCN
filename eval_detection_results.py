@@ -30,13 +30,26 @@ parser.add_argument('--cls_scores', type=str, default=None)
 parser.add_argument('--cls_top_k', type=int, default=1)
 parser.add_argument('--score_weights', type=float, default=None, nargs='+')
 
+parser.add_argument('--train_ft_path', required=True, type=str,
+                    help='path to the h5 feature file')
+parser.add_argument('--test_ft_path', required=True, type=str,
+                    help='path to the h5 feature file')
+parser.add_argument('--feat_dim', required=True, type=int,
+                    help='feature dimension')
+
 args = parser.parse_args()
 
 configs = get_configs(args.dataset)
 dataset_configs = configs['dataset_configs']
+dataset_configs['train_ft_path'] = args.train_ft_path
+dataset_configs['test_ft_path'] = args.test_ft_path
 model_configs = configs["model_configs"]
+model_configs['act_feat_dim'] = args.feat_dim
+model_configs['comp_feat_dim'] = 3 * args.feat_dim
 graph_configs = configs["graph_configs"]
 num_class = model_configs['num_class']
+
+output_folder = os.path.split(args.detection_pickles[0])[0]
 
 nms_threshold = args.nms_threshold if args.nms_threshold else configs['evaluation']['nms_threshold']
 top_k = args.top_k if args.top_k else configs['evaluation']['top_k']
@@ -180,8 +193,8 @@ gt_by_cls = []
 for cls in range(num_class):
     gt_by_cls.append(all_gt[all_gt.cls == cls].reset_index(drop=True).drop('cls', 1))
 
-pickle.dump(gt_by_cls, open('gt_dump.pc', 'wb'), pickle.HIGHEST_PROTOCOL)
-pickle.dump(plain_detections, open('pred_dump.pc', 'wb'), pickle.HIGHEST_PROTOCOL)
+#pickle.dump(gt_by_cls, open(os.path.join(output_folder, 'gt_dump.pc'), 'wb'), pickle.HIGHEST_PROTOCOL)
+#pickle.dump(plain_detections, open(os.path.join(output_folder, 'pred_dump.pc'), 'wb'), pickle.HIGHEST_PROTOCOL)
 print("Calling mean AP calculator from toolkit with {} workers...".format(args.ap_workers))
 
 if args.dataset == 'activitynet1.2':
@@ -227,3 +240,11 @@ table = AsciiTable(display_data, display_title)
 table.justify_columns[-1] = 'right'
 table.inner_footing_row_border = True
 print(table.table)
+
+
+parent_path, run_id = os.path.split(output_folder)
+mAP_at_tIoU = [f'mAP@{t:.2f} {mAP*100:.3f}' for t, mAP in zip(iou_range, map_iou)]
+results = f'[{run_id}|Detection] average-mAP {map_iou.mean()*100:.3f} {" ".join(mAP_at_tIoU)}'
+print(results)
+with open(os.path.join(parent_path, 'results.txt'), 'a') as fobj:
+    fobj.write(f'{results}\n')
